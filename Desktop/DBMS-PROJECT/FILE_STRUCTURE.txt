@@ -1,0 +1,201 @@
+📁 DBMS PROJECT/ (Root Directory)
+│
+├── 📄 SETUP_INSTRUCTIONS.md ..................... Comprehensive setup & API docs
+├── 📄 QUICK_START.md ........................... Fast start guide
+├── 📄 PROJECT_SUMMARY.md ....................... Complete project overview
+├── 📄 VERIFICATION_CHECKLIST.md ................ Testing checklist
+├── 📄 FILE_STRUCTURE.txt ....................... This file
+│
+├── 📁 backend/
+│   ├── 📄 server.js ........................... Express API server (ALL ROUTES)
+│   ├── 📄 db.js ............................... MySQL connection pool
+│   ├── 📄 schema.sql .......................... Database schema & sample data
+│   ├── 📄 package.json ........................ Backend dependencies
+│   ├── 📄 .env ................................ Environment variables
+│   ├── 📁 node_modules/ ....................... Installed packages
+│   └── 📄 package-lock.json ................... Dependency lock file
+│
+└── 📁 frontend/
+    ├── 📁 src/
+    │   ├── 📄 App.js .......................... Main app with routing
+    │   ├── 📄 App.css ......................... Global styles
+    │   ├── 📄 index.js ........................ React entry point
+    │   ├── 📄 index.css ....................... Base styles
+    │   │
+    │   ├── 📁 context/
+    │   │   └── 📄 AuthContext.js ............. Auth state & hooks
+    │   │
+    │   ├── 📁 pages/
+    │   │   ├── 📄 LoginPage.js ............... Login UI (Grower/Customer)
+    │   │   ├── 📄 RegisterPage.js ............ Customer registration
+    │   │   ├── 📄 GrowerDashboard.js ........ Grower main interface
+    │   │   └── 📄 CustomerDashboard.js ...... Customer main interface
+    │   │
+    │   ├── 📁 components/
+    │   │   ├── 📄 AddProductForm.js ......... Add product component
+    │   │   ├── 📄 AddRecommendationForm.js . Add recommendation component
+    │   │   ├── 📄 ProductList.js ........... Product grid display
+    │   │   ├── 📄 Cart.js .................. Shopping cart component
+    │   │   ├── 📄 OrderHistory.js .......... Order list with details
+    │   │   └── 📄 ProtectedRoute.js ........ Route authorization wrapper
+    │   │
+    │   ├── 📁 services/
+    │   │   └── 📄 api.js ................... API calls & axios config
+    │   │
+    │   ├── 📁 styles/
+    │   │   ├── 📄 LoginPage.css ............ Login/Register styling
+    │   │   ├── 📄 RegisterPage.css ........ Registration form styling
+    │   │   ├── 📄 Dashboard.css ........... Dashboard layouts
+    │   │   ├── 📄 Forms.css ............... Form styling
+    │   │   ├── 📄 Components.css .......... Component styling
+    │   │   ├── 📄 Cart.css ............... Cart styling
+    │   │   └── 📄 OrderHistory.css ....... Order history styling
+    │   │
+    │   └── 📁 reportWebVitals.js ........... Performance monitoring
+    │
+    ├── 📁 public/
+    │   ├── 📄 index.html .................... HTML template
+    │   ├── 📄 favicon.ico ................... Website icon
+    │   ├── 📄 manifest.json ................ PWA manifest
+    │   └── 📁 (other static assets)
+    │
+    ├── 📄 package.json ...................... Frontend dependencies
+    ├── 📄 package-lock.json ................ Dependency lock file
+    ├── 📄 .gitignore ....................... Git ignore rules
+    ├── 📄 README.md ........................ React template README
+    └── 📁 node_modules/ ................... Installed packages
+
+═══════════════════════════════════════════════════════════════════
+
+KEY FILES SUMMARY:
+
+BACKEND (Node.js + Express)
+├─ server.js ..................... API server with:
+│                               • Authentication routes
+│                               • Product management
+│                               • Order processing
+│                               • Payment handling
+│                               • Recommendation system
+│
+├─ db.js ......................... MySQL connection pool configuration
+├─ schema.sql .................... Database with 9 tables
+└─ .env .......................... DB credentials & JWT secret
+
+FRONTEND (React + Routing)
+├─ App.js ........................ Router setup with protected routes
+├─ AuthContext.js ............... Login state management
+├─ Pages/ ....................... 4 main pages (Login, Register, Dashboards)
+├─ Components/ .................. 6 reusable components
+├─ services/api.js .............. All API calls with axios
+└─ styles/ ...................... 7 CSS files (responsive)
+
+═══════════════════════════════════════════════════════════════════
+
+COMPONENT ARCHITECTURE:
+
+App
+├─ AuthContext (State)
+├─ Router
+│  ├─ LoginPage
+│  ├─ RegisterPage
+│  ├─ ProtectedRoute (Grower)
+│  │  └─ GrowerDashboard
+│  │     ├─ AddProductForm
+│  │     └─ AddRecommendationForm
+│  └─ ProtectedRoute (Customer)
+│     └─ CustomerDashboard
+│        ├─ ProductList
+│        ├─ Cart
+│        └─ OrderHistory
+
+═══════════════════════════════════════════════════════════════════
+
+API ENDPOINT SUMMARY:
+
+Authentication (Public)
+POST   /api/auth/grower-login
+POST   /api/auth/customer-login
+POST   /api/auth/customer-register
+
+Products
+GET    /api/products
+GET    /api/growers/:id/products
+POST   /api/products
+POST   /api/harvest-batch
+
+Orders
+POST   /api/orders
+GET    /api/customers/:id/orders
+GET    /api/orders/:id/items
+
+Payments
+POST   /api/payments
+GET    /api/orders/:id/payment
+
+Recommendations
+GET    /api/recommendations
+POST   /api/recommendations
+
+Grower Info
+GET    /api/growers/:id
+GET    /api/growers/:id/plots
+
+═══════════════════════════════════════════════════════════════════
+
+DATABASE SCHEMA:
+
+Tables (9 total)
+├─ Grower ........................ Farmer information
+├─ Plot .......................... Farm plots
+├─ Product ...................... Products offered
+├─ HarvestBatch ................. Inventory tracking
+├─ Customer ..................... Customer accounts
+├─ Order ........................ Customer orders
+├─ OrderItem .................... Order line items
+├─ Payment ...................... Payment records
+└─ Recommendation ............... Crop recommendations
+
+═══════════════════════════════════════════════════════════════════
+
+INSTALLATION STEPS:
+
+1. Database
+   SOURCE /Users/saiabhinav/Desktop/DBMS\ PROJECT/backend/schema.sql;
+
+2. Backend
+   cd /Users/saiabhinav/Desktop/DBMS\ PROJECT/backend
+   npm install
+   npm start
+
+3. Frontend
+   cd /Users/saiabhinav/Desktop/DBMS\ PROJECT/frontend
+   npm install
+   npm start
+
+═══════════════════════════════════════════════════════════════════
+
+TEST CREDENTIALS:
+
+Grower Login:
+├─ ID: 1, Name: John Smith
+├─ ID: 2, Name: Maria Garcia
+└─ ID: 3, Name: David Johnson
+
+Customer:
+├─ Create new account via Register
+└─ Or use existing: test@example.com / test123
+
+═══════════════════════════════════════════════════════════════════
+
+TOTAL FILES CREATED: 40+
+- Backend: 4 main files
+- Frontend: 30+ React/CSS files
+- Documentation: 4 guides
+
+TOTAL COMPONENTS: 6 React components
+TOTAL PAGES: 4 main pages
+TOTAL STYLES: 7 CSS files
+TOTAL API ROUTES: 18 endpoints
+TOTAL DATABASE TABLES: 9 tables
+
+═══════════════════════════════════════════════════════════════════
