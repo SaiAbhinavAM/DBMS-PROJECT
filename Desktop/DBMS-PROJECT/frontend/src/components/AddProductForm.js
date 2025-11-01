@@ -6,7 +6,11 @@ const AddProductForm = ({ growerID, onProductAdded }) => {
   const [formData, setFormData] = useState({
     name: '',
     category: '',
-    pricePerUnit: ''
+    pricePerUnit: '',
+    batchNo: '',
+    harvestDate: '',
+    expiryDate: '',
+    quantityAvailable: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,23 +29,67 @@ const AddProductForm = ({ growerID, onProductAdded }) => {
     setError('');
     setSuccess('');
 
-    if (!formData.name || !formData.category || !formData.pricePerUnit) {
-      setError('All fields are required');
+    if (
+      !formData.name ||
+      !formData.category ||
+      !formData.pricePerUnit ||
+      !formData.quantityAvailable ||
+      !formData.batchNo ||
+      !formData.harvestDate ||
+      !formData.expiryDate
+    ) {
+      setError('All fields are required. Please complete the form.');
+      return;
+    }
+
+    const price = parseFloat(formData.pricePerUnit);
+    const quantity = parseFloat(formData.quantityAvailable);
+
+    if (Number.isNaN(price) || price <= 0) {
+      setError('Price per unit must be a positive number.');
+      return;
+    }
+
+    if (Number.isNaN(quantity) || quantity <= 0) {
+      setError('Quantity must be a positive number.');
+      return;
+    }
+
+    if (new Date(formData.harvestDate) > new Date(formData.expiryDate)) {
+      setError('Expiry date must be after the harvest date.');
       return;
     }
 
     setLoading(true);
 
     try {
-      await productAPI.addProduct(
+      const productResponse = await productAPI.addProduct(
         formData.name,
         formData.category,
-        parseFloat(formData.pricePerUnit),
+        price,
         growerID
       );
+
+      const product = productResponse.data;
+
+      await productAPI.addHarvestBatch(
+        product.ProductID,
+        formData.batchNo,
+        formData.harvestDate,
+        formData.expiryDate,
+        quantity
+      );
       
-      setSuccess('Product added successfully!');
-      setFormData({ name: '', category: '', pricePerUnit: '' });
+      setSuccess('Product and inventory added successfully!');
+      setFormData({
+        name: '',
+        category: '',
+        pricePerUnit: '',
+        batchNo: '',
+        harvestDate: '',
+        expiryDate: '',
+        quantityAvailable: ''
+      });
       
       setTimeout(() => {
         onProductAdded();
@@ -102,6 +150,53 @@ const AddProductForm = ({ growerID, onProductAdded }) => {
             min="0"
             required
           />
+        </div>
+
+        <div className="form-group">
+          <label>Quantity Available</label>
+          <input
+            type="number"
+            name="quantityAvailable"
+            value={formData.quantityAvailable}
+            onChange={handleChange}
+            placeholder="e.g., 100"
+            step="0.01"
+            min="0"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Batch Number (optional)</label>
+          <input
+            type="text"
+            name="batchNo"
+            value={formData.batchNo}
+            onChange={handleChange}
+            placeholder="Leave blank to auto-generate"
+          />
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>Harvest Date (optional)</label>
+            <input
+              type="date"
+              name="harvestDate"
+              value={formData.harvestDate}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Expiry Date (optional)</label>
+            <input
+              type="date"
+              name="expiryDate"
+              value={formData.expiryDate}
+              onChange={handleChange}
+            />
+          </div>
         </div>
 
         <button type="submit" disabled={loading} className="submit-btn">

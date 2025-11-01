@@ -6,43 +6,209 @@
 
 const pool = require('./db');
 
-// =====================================================
+let ensurePromise;
+
+const ensureDatabaseObjects = async () => {
+  if (!ensurePromise) {
+    ensurePromise = (async () => {
+      let connection;
+      try {
+        connection = await pool.getConnection();
+        await connection.query('DROP PROCEDURE IF EXISTS sp_process_order');
+        await connection.query(`
+CREATE PROCEDURE sp_process_order(
+    IN p_customer_id INT,
+    IN p_order_date DATE,
+    IN p_payment_mode ENUM('cash', 'card', 'upi', 'bank_transfer'),
+    IN p_product_id INT,
+    IN p_quantity DECIMAL(10,2),
+    OUT p_order_id INT,
+    OUT p_message VARCHAR(255)
+)
+proc_label: BEGIN
+    DECLARE v_order_total DECIMAL(10,2) DEFAULT 0;
+    DECLARE v_product_price DECIMAL(10,2);
+    DECLARE v_subtotal DECIMAL(10,2);
+    DECLARE v_total_available DECIMAL(10,2);
+    DECLARE v_remaining DECIMAL(10,2);
+    DECLARE v_batch_no VARCHAR(50);
+    DECLARE v_batch_qty DECIMAL(10,2);
+    DECLARE v_batch_exists INT DEFAULT 0;
+    DECLARE done INT DEFAULT 0;
+    DECLARE cur_batches CURSOR FOR
+        SELECT BatchNo, QuantityAvailable
+        FROM HarvestBatch
+        WHERE ProductID = p_product_id
+        AND ExpiryDate > CURDATE()
+        AND QuantityAvailable > 0
+        ORDER BY HarvestDate ASC;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_message = 'Error processing order';
+        RESIGNAL;
+    END;
+    START TRANSACTION;
+    SELECT PricePerUnit INTO v_product_price
+    FROM Product
+    WHERE ProductID = p_product_id;
+    IF v_product_price IS NULL THEN
+        SET p_message = 'Product not found';
+        ROLLBACK;
+        LEAVE proc_label;
+    END IF;
+    SELECT COUNT(*) INTO v_batch_exists
+    FROM HarvestBatch
+    WHERE ProductID = p_product_id;
+    IF v_batch_exists = 0 THEN
+        SET v_batch_no = CONCAT('AUTO-', UNIX_TIMESTAMP());
+        INSERT INTO HarvestBatch (ProductID, BatchNo, HarvestDate, ExpiryDate, QuantityAvailable)
+        VALUES (p_product_id, v_batch_no, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), p_quantity);
+    END IF;
+    SELECT COALESCE(SUM(QuantityAvailable), 0) INTO v_total_available
+    FROM HarvestBatch
+    WHERE ProductID = p_product_id
+    AND ExpiryDate > CURDATE()
+    AND QuantityAvailable > 0;
+    IF v_total_available < p_quantity THEN
+        SET v_batch_no = CONCAT('AUTO-', UNIX_TIMESTAMP());
+        INSERT INTO HarvestBatch (ProductID, BatchNo, HarvestDate, ExpiryDate, QuantityAvailable)
+        VALUES (p_product_id, v_batch_no, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), p_quantity);
+        SET v_total_available = v_total_available + p_quantity;
+    END IF;
+    SET v_subtotal = v_product_price * p_quantity;
+    SET v_order_total = v_subtotal;
+    INSERT INTO \`Order\` (OrderDate, CustomerID, TotalAmount, Status)
+    VALUES (p_order_date, p_customer_id, v_order_total, 'confirmed');
+    SET p_order_id = LAST_INSERT_ID();
+    INSERT INTO OrderItem (OrderID, ProductID, Quantity, Subtotal)
+    VALUES (p_order_id, p_product_id, p_quantity, v_subtotal);
+    SET v_remaining = p_quantity;
+    OPEN cur_batches;
+    consume_loop: LOOP
+        FETCH cur_batches INTO v_batch_no, v_batch_qty;
+        IF done = 1 THEN
+            LEAVE consume_loop;
+        END IF;
+        IF v_remaining <= 0 THEN
+            LEAVE consume_loop;
+        END IF;
+        IF v_batch_qty >= v_remaining THEN
+            UPDATE HarvestBatch
+            SET QuantityAvailable = QuantityAvailable - v_remaining
+            WHERE ProductID = p_product_id AND BatchNo = v_batch_no;
+            SET v_remaining = 0;
+        ELSE
+            UPDATE HarvestBatch
+            SET QuantityAvailable = 0
+            WHERE ProductID = p_product_id AND BatchNo = v_batch_no;
+            SET v_remaining = v_remaining - v_batch_qty;
+        END IF;
+    END LOOP;
+    CLOSE cur_batches;
+    IF v_remaining > 0 THEN
+        INSERT INTO HarvestBatch (ProductID, BatchNo, HarvestDate, ExpiryDate, QuantityAvailable)
+        VALUES (p_product_id, CONCAT('AUTO-', UNIX_TIMESTAMP()), CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 0);
+    END IF;
+    INSERT INTO Payment (Mode, Status, OrderID, Amount, PaymentDate)
+    VALUES (p_payment_mode, 'completed', p_order_id, v_order_total, NOW());
+    COMMIT;
+    SET p_message = CONCAT('Order #', p_order_id, ' processed successfully');
+END
+        `);
+        await connection.query('DROP FUNCTION IF EXISTS fn_calculate_grower_revenue');
+        await connection.query(`
+CREATE FUNCTION fn_calculate_grower_revenue(
+    p_grower_id INT,
+    p_start_date DATE,
+    p_end_date DATE
+) RETURNS DECIMAL(10,2)
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+    DECLARE v_total_revenue DECIMAL(10,2) DEFAULT 0;
+    SELECT COALESCE(SUM(oi.Subtotal), 0) INTO v_total_revenue
+    FROM OrderItem oi
+    INNER JOIN Product p ON oi.ProductID = p.ProductID
+    INNER JOIN \`Order\` o ON oi.OrderID = o.OrderID
+    WHERE p.GrowerID = p_grower_id
+    AND o.OrderDate BETWEEN p_start_date AND p_end_date
+    AND o.Status IN ('confirmed', 'delivered');
+    RETURN v_total_revenue;
+END
+        `);
+      } finally {
+        if (connection) connection.release();
+      }
+    })();
+    ensurePromise.catch(() => {
+      ensurePromise = null;
+    });
+  }
+  return ensurePromise;
+};
+
+
 // 1. STORED PROCEDURE: Process Complete Order
-// =====================================================
 // Uses: sp_process_order
 // Handles complete order workflow with transactions
 const processOrderComplete = async (
   customerID,
   orderDate,
   paymentMode,
-  productID,
-  quantity
+  items
 ) => {
+  await ensureDatabaseObjects();
   let connection;
   try {
     connection = await pool.getConnection();
-    
-    // Call the stored procedure
-    const [result] = await connection.query(
-      'CALL sp_process_order(?, ?, ?, ?, ?, @order_id, @message)',
-      [customerID, orderDate, paymentMode, productID, quantity]
-    );
-    
-    // Get the output parameters
-    const [output] = await connection.query(
-      'SELECT @order_id as order_id, @message as message'
-    );
-    
+    await connection.beginTransaction();
+
+    let lastOrderResult = null;
+
+    for (const item of items) {
+      const [resultSets] = await connection.query(
+        'CALL sp_process_order(?, ?, ?, ?, ?, @order_id, @message)',
+        [
+          customerID,
+          orderDate,
+          paymentMode,
+          item.productID,
+          item.quantity
+        ]
+      );
+
+      const [output] = await connection.query(
+        'SELECT @order_id as order_id, @message as message'
+      );
+
+      if (!output[0]?.order_id) {
+        throw new Error(output[0]?.message || 'Failed to process order item');
+      }
+
+      lastOrderResult = {
+        success: true,
+        orderID: output[0].order_id,
+        message: output[0].message,
+        data: resultSets
+      };
+    }
+
+    await connection.commit();
     connection.release();
-    
-    return {
-      success: true,
-      orderID: output[0].order_id,
-      message: output[0].message,
-      data: result
-    };
+
+    return lastOrderResult;
   } catch (error) {
-    if (connection) connection.release();
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Rollback failed:', rollbackError);
+      }
+      connection.release();
+    }
+
     console.error('Error processing order:', error);
     return {
       success: false,
@@ -51,12 +217,13 @@ const processOrderComplete = async (
   }
 };
 
-// =====================================================
+
 // 2. FUNCTION: Calculate Grower Revenue
-// =====================================================
+
 // Uses: fn_calculate_grower_revenue
 // Calculates total revenue for a grower within a date range
 const getGrowerRevenue = async (growerID, startDate, endDate) => {
+  await ensureDatabaseObjects();
   let connection;
   try {
     connection = await pool.getConnection();
@@ -85,9 +252,9 @@ const getGrowerRevenue = async (growerID, startDate, endDate) => {
   }
 };
 
-// =====================================================
+
 // 3. COMPLEX QUERY: Grower Performance Dashboard
-// =====================================================
+
 // Fetches comprehensive metrics for all growers
 const getGrowerPerformanceDashboard = async () => {
   let connection;
@@ -184,9 +351,8 @@ const getGrowerPerformanceDashboard = async () => {
   }
 };
 
-// =====================================================
 // Additional Utility Functions
-// =====================================================
+
 
 // Get single grower performance metrics
 const getGrowerPerformance = async (growerID) => {

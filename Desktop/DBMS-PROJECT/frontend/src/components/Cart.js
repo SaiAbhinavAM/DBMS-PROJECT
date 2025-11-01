@@ -25,19 +25,20 @@ const Cart = ({ cart, onRemove, onUpdateQuantity, onCheckout, customerID }) => {
     setError('');
 
     try {
-      // Create order
-      const orderItems = cart.map(item => ({
-        productID: item.ProductID,
-        quantity: item.quantity
-      }));
+      // Create order with full workflow using stored procedure
+      const orderPayload = {
+        customerID,
+        orderDate: new Date().toISOString().split('T')[0],
+        paymentMode,
+        items: cart.map(item => ({
+          productID: item.ProductID,
+          quantity: item.quantity
+        }))
+      };
 
-      const orderResponse = await orderAPI.createOrder(customerID, orderItems);
-      const orderID = orderResponse.data.OrderID;
+      const response = await orderAPI.createOrderComplete(orderPayload);
 
-      // Create payment
-      await paymentAPI.createPayment(orderID, paymentMode, calculateTotal());
-
-      setSuccess('Order placed successfully!');
+      setSuccess(response.data.message || 'Order placed successfully!');
       setShowPayment(false);
       
       setTimeout(() => {

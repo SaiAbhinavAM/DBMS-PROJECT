@@ -68,6 +68,9 @@ export const orderAPI = {
   createOrder: (customerID, items) =>
     api.post('/orders', { customerID, items }),
   
+  createOrderComplete: (payload) =>
+    api.post('/orders/process-complete', payload),
+  
   getCustomerOrders: (id) => api.get(`/customers/${id}/orders`),
   
   getOrderItems: (id) => api.get(`/orders/${id}/items`)
@@ -79,6 +82,20 @@ export const paymentAPI = {
     api.post('/payments', { orderID, mode, amount }),
   
   getOrderPayment: (id) => api.get(`/orders/${id}/payment`)
+};
+
+// Analytics APIs
+export const analyticsAPI = {
+  getGrowerRevenue: (growerId, startDate, endDate) =>
+    api.get(`/growers/${growerId}/revenue`, {
+      params: { startDate, endDate }
+    }),
+
+  getAdminGrowerPerformance: () =>
+    api.get('/admin/grower-performance'),
+
+  getGrowerPerformance: (growerId) =>
+    api.get(`/growers/${growerId}/performance`)
 };
 
 // Admin APIs

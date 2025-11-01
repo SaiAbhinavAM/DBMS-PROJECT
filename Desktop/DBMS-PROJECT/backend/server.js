@@ -789,9 +789,9 @@ const dbObjects = require('./databaseObjects');
 // which handles complete order processing with transactions
 app.post('/api/orders/process-complete', verifyToken, async (req, res) => {
   try {
-    const { customerID, orderDate, paymentMode, productID, quantity } = req.body;
+    const { customerID, orderDate, paymentMode, items } = req.body;
     
-    if (!customerID || !orderDate || !paymentMode || !productID || !quantity) {
+    if (!customerID || !orderDate || !paymentMode || !items || items.length === 0) {
       return res.status(400).json({ message: 'All fields required' });
     }
     
@@ -799,8 +799,7 @@ app.post('/api/orders/process-complete', verifyToken, async (req, res) => {
       customerID,
       orderDate,
       paymentMode,
-      productID,
-      quantity
+      items
     );
     
     if (result.success) {
@@ -844,9 +843,8 @@ app.get('/api/growers/:id/revenue', verifyToken, async (req, res) => {
 // =====================================================
 // Get Grower Performance Dashboard
 // =====================================================
-// This endpoint uses the complex query to fetch comprehensive
-// performance metrics for all growers
-app.get('/api/growers/dashboard/performance', verifyToken, async (req, res) => {
+// Exposes aggregated analytics for all growers to the admin UI
+app.get('/api/admin/grower-performance', verifyToken, async (req, res) => {
   try {
     const result = await dbObjects.getGrowerPerformanceDashboard();
     

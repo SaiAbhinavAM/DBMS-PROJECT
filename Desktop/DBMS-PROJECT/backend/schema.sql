@@ -158,19 +158,17 @@ INSERT INTO Recommendation (TownName, ClimateType, Season, RecommendedCrop, Bene
 ('Sunny Hills', 'Mediterranean', 'Summer', 'Bell Peppers', 'Rich in vitamins, drought resistant', 6.2, 'Sandy', 'Mulch around plants, provide shade during peak sun hours', 3, 2),
 ('Garden City', 'Continental', 'Fall', 'Carrots', 'Long storage life, cold hardy', 12.0, 'Loamy', 'Plant in raised beds, thin seedlings regularly', 4, 2);
 
--- =====================================================
--- TRIGGERS, PROCEDURES, FUNCTIONS, AND COMPLEX QUERY
--- =====================================================
 
--- =====================================================
+-- TRIGGERS, PROCEDURES, FUNCTIONS, AND COMPLEX QUERY
+
+
+
 -- 1. TRIGGER: Auto-calculate Order Total Amount
--- =====================================================
--- This trigger automatically updates the Order's TotalAmount
--- whenever OrderItems are inserted, updated, or deleted
+
 
 DELIMITER $$
 
-DROP TRIGGER IF EXISTS trg_update_order_total_insert$$
+
 CREATE TRIGGER trg_update_order_total_insert
 AFTER INSERT ON OrderItem
 FOR EACH ROW
@@ -184,7 +182,7 @@ BEGIN
     WHERE OrderID = NEW.OrderID;
 END$$
 
-DROP TRIGGER IF EXISTS trg_update_order_total_update$$
+
 CREATE TRIGGER trg_update_order_total_update
 AFTER UPDATE ON OrderItem
 FOR EACH ROW
@@ -198,7 +196,7 @@ BEGIN
     WHERE OrderID = NEW.OrderID;
 END$$
 
-DROP TRIGGER IF EXISTS trg_update_order_total_delete$$
+
 CREATE TRIGGER trg_update_order_total_delete
 AFTER DELETE ON OrderItem
 FOR EACH ROW
@@ -214,19 +212,13 @@ END$$
 
 DELIMITER ;
 
--- =====================================================
+
 -- 2. STORED PROCEDURE: Process Complete Order
--- =====================================================
--- This procedure handles the complete order processing workflow:
--- - Creates the order
--- - Adds order items
--- - Updates harvest batch quantities
--- - Creates payment record
--- - Updates order status
+
 
 DELIMITER $$
 
-DROP PROCEDURE IF EXISTS sp_process_order$$
+
 CREATE PROCEDURE sp_process_order(
     IN p_customer_id INT,
     IN p_order_date DATE,
@@ -310,15 +302,12 @@ END$$
 
 DELIMITER ;
 
--- =====================================================
+
 -- 3. FUNCTION: Calculate Grower Revenue
--- =====================================================
--- This function calculates the total revenue for a grower
--- within a specified date range
 
 DELIMITER $$
 
-DROP FUNCTION IF EXISTS fn_calculate_grower_revenue$$
+
 CREATE FUNCTION fn_calculate_grower_revenue(
     p_grower_id INT,
     p_start_date DATE,
@@ -342,9 +331,8 @@ END$$
 
 DELIMITER ;
 
--- =====================================================
+
 -- 4. COMPLEX QUERY: Grower Performance Dashboard
--- =====================================================
 -- This query provides comprehensive performance metrics for all growers
 -- including: total products, total plots, total revenue, average order value,
 -- active recommendations, and success rate

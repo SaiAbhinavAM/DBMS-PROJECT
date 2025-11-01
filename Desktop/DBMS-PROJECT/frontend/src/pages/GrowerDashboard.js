@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { growerAPI, productAPI, recommendationAPI } from '../services/api';
+import { growerAPI, recommendationAPI, analyticsAPI } from '../services/api';
 import AddProductForm from '../components/AddProductForm';
 import AddRecommendationForm from '../components/AddRecommendationForm';
 import '../styles/Dashboard.css';
