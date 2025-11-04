@@ -123,7 +123,14 @@ export const adminAPI = {
   getAllRecommendations: () => api.get('/admin/recommendations'),
 
   // Harvest Batches
-  getAllHarvestBatches: () => api.get('/admin/harvest-batches')
+  getAllHarvestBatches: () => api.get('/admin/harvest-batches'),
+
+  // Complex Queries
+  getGrowerPerformance: () => api.get('/admin/complex-queries/grower-performance'),
+  getMonthlyCategorySales: () => api.get('/admin/complex-queries/monthly-category-sales'),
+  getCustomerStatistics: () => api.get('/admin/complex-queries/customer-statistics'),
+  getBatchStatusMonitoring: () => api.get('/admin/complex-queries/batch-status-monitoring'),
+  getRecommendationPerformance: () => api.get('/admin/complex-queries/recommendation-performance')
 };
 
 export default api;

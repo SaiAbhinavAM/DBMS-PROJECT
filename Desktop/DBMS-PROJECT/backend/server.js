@@ -433,6 +433,82 @@ app.get('/api/admin/harvest-batches', verifyToken, async (req, res) => {
   }
 });
 
+// Complex Queries Routes
+app.get('/api/admin/complex-queries/grower-performance', verifyToken, async (req, res) => {
+  try {
+    const { getGrowerPerformanceSimple } = require('./databaseObjects');
+    const result = await getGrowerPerformanceSimple();
+    if (result.success) {
+      res.json(result.data);
+    } else {
+      res.status(500).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/admin/complex-queries/monthly-category-sales', verifyToken, async (req, res) => {
+  try {
+    const { getMonthlyCategorySales } = require('./databaseObjects');
+    const result = await getMonthlyCategorySales();
+    if (result.success) {
+      res.json(result.data);
+    } else {
+      res.status(500).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/admin/complex-queries/customer-statistics', verifyToken, async (req, res) => {
+  try {
+    const { getCustomerStatistics } = require('./databaseObjects');
+    const result = await getCustomerStatistics();
+    if (result.success) {
+      res.json(result.data);
+    } else {
+      res.status(500).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/admin/complex-queries/batch-status-monitoring', verifyToken, async (req, res) => {
+  try {
+    const { getBatchStatusMonitoring } = require('./databaseObjects');
+    const result = await getBatchStatusMonitoring();
+    if (result.success) {
+      res.json(result.data);
+    } else {
+      res.status(500).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/admin/complex-queries/recommendation-performance', verifyToken, async (req, res) => {
+  try {
+    const { getRecommendationPerformance } = require('./databaseObjects');
+    const result = await getRecommendationPerformance();
+    if (result.success) {
+      res.json(result.data);
+    } else {
+      res.status(500).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ==================== GROWER ROUTES ====================
 
 // Get Grower Details

@@ -458,10 +458,210 @@ const testTriggers = async () => {
   }
 };
 
+// Complex Queries for Admin Dashboard
+
+// 1. Grower Performance Dashboard (Simplified)
+const getGrowerPerformanceSimple = async () => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [growers] = await connection.query(`
+      SELECT
+          g.GrowerID,
+          g.Name AS GrowerName,
+          COALESCE((SELECT COUNT(*) FROM Plot pl WHERE pl.GrowerID = g.GrowerID), 0) AS TotalPlots,
+          COALESCE((SELECT SUM(Size) FROM Plot pl WHERE pl.GrowerID = g.GrowerID), 0) AS TotalPlotSize,
+          COALESCE((SELECT COUNT(DISTINCT ProductID) FROM Product pr WHERE pr.GrowerID = g.GrowerID), 0) AS TotalProducts,
+          COALESCE((SELECT COUNT(DISTINCT o.OrderID)
+                    FROM Product pr
+                    JOIN OrderItem oi ON oi.ProductID = pr.ProductID
+                    JOIN \`Order\` o ON o.OrderID = oi.OrderID
+                    WHERE pr.GrowerID = g.GrowerID
+                    AND o.Status IN ('confirmed', 'delivered')), 0) AS FulfilledOrders,
+          COALESCE((SELECT SUM(oi.Subtotal)
+                    FROM Product pr
+                    JOIN OrderItem oi ON oi.ProductID = pr.ProductID
+                    JOIN \`Order\` o ON o.OrderID = oi.OrderID
+                    WHERE pr.GrowerID = g.GrowerID
+                    AND o.Status IN ('confirmed', 'delivered')), 0) AS TotalRevenue
+      FROM Grower g
+      LIMIT 10;
+    `);
+
+    connection.release();
+
+    return {
+      success: true,
+      data: growers
+    };
+  } catch (error) {
+    if (connection) connection.release();
+    console.error('Error fetching grower performance simple:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
+// 2. Monthly Category Sales
+const getMonthlyCategorySales = async () => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [sales] = await connection.query(`
+      SELECT
+          DATE_FORMAT(o.OrderDate, '%Y-%m') AS month_year,
+          p.Category,
+          SUM(oi.Subtotal) AS category_revenue
+      FROM OrderItem oi
+      JOIN \`Order\` o ON o.OrderID = oi.OrderID
+      JOIN Product p ON p.ProductID = oi.ProductID
+      WHERE o.Status IN ('confirmed', 'delivered')
+      GROUP BY DATE_FORMAT(o.OrderDate, '%Y-%m'), p.Category
+      ORDER BY month_year DESC, category_revenue DESC
+      LIMIT 20;
+    `);
+
+    connection.release();
+
+    return {
+      success: true,
+      data: sales
+    };
+  } catch (error) {
+    if (connection) connection.release();
+    console.error('Error fetching monthly category sales:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
+// 3. Customer Statistics
+const getCustomerStatistics = async () => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [customers] = await connection.query(`
+      SELECT
+          c.CustomerID,
+          c.Name,
+          COUNT(DISTINCT o.OrderID) AS completed_orders,
+          MIN(o.OrderDate) AS first_order_date,
+          MAX(o.OrderDate) AS last_order_date,
+          SUM(o.TotalAmount) AS total_spent
+      FROM Customer c
+      JOIN \`Order\` o ON o.CustomerID = c.CustomerID
+      WHERE o.Status IN ('confirmed', 'delivered')
+      GROUP BY c.CustomerID, c.Name
+      HAVING completed_orders > 1
+      ORDER BY total_spent DESC
+      LIMIT 10;
+    `);
+
+    connection.release();
+
+    return {
+      success: true,
+      data: customers
+    };
+  } catch (error) {
+    if (connection) connection.release();
+    console.error('Error fetching customer statistics:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
+// 4. Batch Status Monitoring
+const getBatchStatusMonitoring = async () => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [batches] = await connection.query(`
+      SELECT
+          hb.ProductID,
+          p.Name AS ProductName,
+          hb.BatchNo,
+          hb.QuantityAvailable,
+          DATEDIFF(hb.ExpiryDate, CURDATE()) AS days_to_expiry
+      FROM HarvestBatch hb
+      JOIN Product p ON p.ProductID = hb.ProductID
+      WHERE DATEDIFF(hb.ExpiryDate, CURDATE()) BETWEEN 0 AND 30
+      ORDER BY days_to_expiry ASC
+      LIMIT 10;
+    `);
+
+    connection.release();
+
+    return {
+      success: true,
+      data: batches
+    };
+  } catch (error) {
+    if (connection) connection.release();
+    console.error('Error fetching batch status monitoring:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
+// 5. Recommendation Performance
+const getRecommendationPerformance = async () => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    const [recommendations] = await connection.query(`
+      SELECT
+          r.RecommendationID,
+          r.GrowerID,
+          r.TownName,
+          r.RecommendedCrop,
+          COUNT(DISTINCT o.OrderID) AS fulfilled_orders
+      FROM Recommendation r
+      LEFT JOIN Product p ON p.ProductID = r.ProductID
+      LEFT JOIN OrderItem oi ON oi.ProductID = p.ProductID
+      LEFT JOIN \`Order\` o ON o.OrderID = oi.OrderID AND o.Status IN ('confirmed', 'delivered')
+      GROUP BY r.RecommendationID, r.GrowerID, r.TownName, r.RecommendedCrop
+      LIMIT 10;
+    `);
+
+    connection.release();
+
+    return {
+      success: true,
+      data: recommendations
+    };
+  } catch (error) {
+    if (connection) connection.release();
+    console.error('Error fetching recommendation performance:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
 module.exports = {
   processOrderComplete,
   getGrowerRevenue,
   getGrowerPerformanceDashboard,
   getGrowerPerformance,
-  testTriggers
+  testTriggers,
+  getGrowerPerformanceSimple,
+  getMonthlyCategorySales,
+  getCustomerStatistics,
+  getBatchStatusMonitoring,
+  getRecommendationPerformance
 };

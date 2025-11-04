@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { adminAPI } from '../services/api';
+import { adminAPI, analyticsAPI } from '../services/api';
 import '../styles/AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -14,6 +14,10 @@ const AdminDashboard = () => {
   const [editData, setEditData] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [revenueData, setRevenueData] = useState({});
+  const [calculatingRevenue, setCalculatingRevenue] = useState(false);
 
   const tabs = [
     { key: 'growers', label: '🌱 Growers', count: 0 },
@@ -22,7 +26,8 @@ const AdminDashboard = () => {
     { key: 'customers', label: '👥 Customers', count: 0 },
     { key: 'payments', label: '💳 Payments', count: 0 },
     { key: 'recommendations', label: '💡 Recommendations', count: 0 },
-    { key: 'harvestBatches', label: '🌾 Harvest Batches', count: 0 }
+    { key: 'harvestBatches', label: '🌾 Harvest Batches', count: 0 },
+    { key: 'revenue', label: '📊 Revenue Report', count: 0 }
   ];
 
   useEffect(() => {
@@ -56,10 +61,19 @@ const AdminDashboard = () => {
         case 'harvestBatches':
           response = await adminAPI.getAllHarvestBatches();
           break;
+        case 'revenue':
+          response = await adminAPI.getAllGrowers(); // Use growers data for revenue tab
+          break;
         default:
           response = { data: [] };
       }
       setData(response.data);
+      // Reset revenue data when switching tabs
+      if (tab === 'revenue') {
+        setStartDate('');
+        setEndDate('');
+        setRevenueData({});
+      }
     } catch (err) {
       setError('Failed to load data');
       console.error(err);
@@ -123,9 +137,107 @@ const AdminDashboard = () => {
     }
   };
 
+  const calculateRevenue = async (growerId) => {
+    if (!startDate || !endDate) {
+      setError('Please select start and end dates');
+      return;
+    }
+
+    setCalculatingRevenue(true);
+    setError('');
+
+    try {
+      const response = await analyticsAPI.getGrowerRevenue(growerId, startDate, endDate);
+      // Ensure we're storing a number value
+      const revenue = parseFloat(response.data?.totalRevenue || 0);
+      setRevenueData(prev => ({
+        ...prev,
+        [growerId]: revenue
+      }));
+      setSuccess(`Revenue calculated successfully for Grower #${growerId}`);
+    } catch (err) {
+      setError(`Failed to calculate revenue for Grower #${growerId}: ${err.message}`);
+      // Set revenue to 0 on error
+      setRevenueData(prev => ({
+        ...prev,
+        [growerId]: 0
+      }));
+    } finally {
+      setCalculatingRevenue(false);
+    }
+  };
+
+  const renderRevenueTable = () => {
+    return (
+      <div className="revenue-section">
+        <div className="date-picker-container">
+          <div className="date-picker">
+            <label>Start Date:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="date-input"
+            />
+          </div>
+          <div className="date-picker">
+            <label>End Date:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="date-input"
+            />
+          </div>
+        </div>
+        
+        <div className="table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Grower ID</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Revenue</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((grower) => (
+                <tr key={grower.GrowerID}>
+                  <td>{grower.GrowerID}</td>
+                  <td>{grower.Name}</td>
+                  <td>{grower.ContactNo}</td>
+                  <td>
+                    {revenueData[grower.GrowerID] !== undefined
+                      ? `₹${revenueData[grower.GrowerID].toFixed(2)}`
+                      : '---'}
+                  </td>
+                  <td className="action-cell">
+                    <button
+                      className="btn-calculate"
+                      onClick={() => calculateRevenue(grower.GrowerID)}
+                      disabled={calculatingRevenue || !startDate || !endDate}
+                    >
+                      {calculatingRevenue ? 'Calculating...' : 'Calculate Revenue'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   const renderTable = () => {
     if (loading) return <div className="loading">Loading...</div>;
     if (data.length === 0) return <div className="no-data">No data available</div>;
+
+    if (activeTab === 'revenue') {
+      return renderRevenueTable();
+    }
 
     const columns = Object.keys(data[0] || {});
 
@@ -202,9 +314,17 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>👨‍💼 Admin Dashboard</h1>
-        <button className="logout-btn" onClick={handleLogout}>
-          Logout
-        </button>
+        <div className="header-actions">
+          <button
+            className="complex-queries-btn"
+            onClick={() => navigate('/admin/complex-queries')}
+          >
+            🔍 Complex Queries
+          </button>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}

@@ -9,6 +9,7 @@ import GrowerRegisterPage from './pages/GrowerRegisterPage';
 import GrowerDashboard from './pages/GrowerDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ComplexQueriesPage from './pages/ComplexQueriesPage';
 
 import './App.css';
 
@@ -47,7 +48,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route
+            path="/admin/complex-queries"
+            element={
+              <ProtectedRoute userType="admin">
+                <ComplexQueriesPage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="/" element={<Navigate to="/login" />} />
         </Routes>
       </AuthProvider>
