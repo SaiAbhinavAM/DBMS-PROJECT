@@ -20,7 +20,7 @@
 }
 
 .product-header {
-  background: linear-gradient(135deg, #4CAF50, #45a049);
+  background: linear-gradient(135deg,black, #45a049);
   color: white;
   padding: 15px;
   display: flex;

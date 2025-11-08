@@ -319,7 +319,7 @@ const AdminDashboard = () => {
             className="complex-queries-btn"
             onClick={() => navigate('/admin/complex-queries')}
           >
-            🔍 Complex Queries
+            🔍 Analysis
           </button>
           <button className="logout-btn" onClick={handleLogout}>
             Logout

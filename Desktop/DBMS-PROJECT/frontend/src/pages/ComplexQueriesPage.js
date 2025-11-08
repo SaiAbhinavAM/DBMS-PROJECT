@@ -98,7 +98,7 @@ const ComplexQueriesPage = () => {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h1 style={styles.title}>🔍 Complex Queries Dashboard</h1>
+        <h1 style={styles.title}>🔍 Analysis Dashboard</h1>
         <p style={styles.subtitle}>Execute advanced analytical queries to gain insights into your agricultural marketplace</p>
       </div>
 
