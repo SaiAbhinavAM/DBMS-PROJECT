@@ -14,6 +14,7 @@ const CustomerDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -42,8 +43,24 @@ const CustomerDashboard = () => {
   };
 
   const addToCart = (product) => {
+    // Check if product is out of stock
+    if (!product.TotalQuantity || product.TotalQuantity <= 0) {
+      setError('This product is out of stock');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     const existingItem = cart.find(item => item.ProductID === product.ProductID);
-    
+    const currentQuantity = existingItem ? existingItem.quantity : 0;
+    const newQuantity = currentQuantity + 1;
+
+    // Check if adding another unit would exceed available stock
+    if (newQuantity > product.TotalQuantity) {
+      setError('Cannot add more items than available stock');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     if (existingItem) {
       const updatedCart = cart.map(item =>
         item.ProductID === product.ProductID
@@ -57,6 +74,10 @@ const CustomerDashboard = () => {
       setCart(newCart);
       localStorage.setItem('cart', JSON.stringify(newCart));
     }
+
+    // Show success message
+    setSuccessMessage('Item added to cart successfully!');
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const removeFromCart = (productID) => {
@@ -69,6 +90,14 @@ const CustomerDashboard = () => {
     if (quantity <= 0) {
       removeFromCart(productID);
     } else {
+      // Find the product to check available stock
+      const product = products.find(p => p.ProductID === productID);
+      if (product && quantity > product.TotalQuantity) {
+        setError('Cannot set quantity higher than available stock');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+
       const updatedCart = cart.map(item =>
         item.ProductID === productID
           ? { ...item, quantity }
@@ -122,6 +151,7 @@ const CustomerDashboard = () => {
 
         <div className="content">
           {error && <div className="error-message">{error}</div>}
+          {successMessage && <div className="success-message" style={{ color: 'green', padding: '10px', marginBottom: '10px', backgroundColor: '#d4edda', border: '1px solid #c3e6cb', borderRadius: '4px' }}>{successMessage}</div>}
 
           {activeTab === 'products' && (
             <div className="tab-content">

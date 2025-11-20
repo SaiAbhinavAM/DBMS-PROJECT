@@ -5,27 +5,33 @@ const ProductList = ({ products, onAddToCart }) => {
   return (
     <div className="products-grid">
       {products && products.length > 0 ? (
-        products.map(product => (
-          <div key={product.ProductID} className="product-card">
-            <div className="product-header">
-              <h4>{product.Name}</h4>
-              <span className="category-badge">{product.Category}</span>
-            </div>
+        products.map(product => {
+          const isOutOfStock = !product.TotalQuantity || product.TotalQuantity <= 0;
 
-            <div className="product-info">
-              <p><strong>Price:</strong> ₹{product.PricePerUnit}/unit</p>
-              <p><strong>Grower:</strong> {product.GrowerName}</p>
-              <p><strong>Available Qty:</strong> {product.TotalQuantity || 'Check stock'}</p>
-            </div>
+          return (
+            <div key={product.ProductID} className="product-card">
+              <div className="product-header">
+                <h4>{product.Name}</h4>
+                <span className="category-badge">{product.Category}</span>
+              </div>
 
-            <button
-              onClick={() => onAddToCart(product)}
-              className="add-to-cart-btn"
-            >
-              🛒 Add to Cart
-            </button>
-          </div>
-        ))
+              <div className="product-info">
+                <p><strong>Price:</strong> ₹{product.PricePerUnit}/unit</p>
+                <p><strong>Grower:</strong> {product.GrowerName}</p>
+                <p><strong>Available Qty:</strong> {isOutOfStock ? 'Out of Stock' : `${product.TotalQuantity} units`}</p>
+              </div>
+
+              <button
+                onClick={() => onAddToCart(product)}
+                className="add-to-cart-btn"
+                disabled={isOutOfStock}
+                style={{ opacity: isOutOfStock ? 0.5 : 1, cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}
+              >
+                {isOutOfStock ? 'Out of Stock' : '🛒 Add to Cart'}
+              </button>
+            </div>
+          );
+        })
       ) : (
         <p className="no-data">No products available</p>
       )}
